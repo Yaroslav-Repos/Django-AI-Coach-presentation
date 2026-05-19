@@ -324,11 +324,9 @@ Django-AI-Coach-presentation/
 │
 ├── static/                      # Static files
 │   ├── css/styles.css         # Global styles
-│   ├── js/
-│   │   ├── auth.js            # Authentication manager
-│   │   ├── cv.js              # AI Coach logic
-│   │   └── utils.js           # Utilities
-│   └── img/
+│   └── js/
+│       ├── auth.js            # Authentication manager
+│       └── cv.js              # AI Coach logic
 │
 ├── Django_AI_Coach_presentation/
 │   ├── settings.py            # Django settings
