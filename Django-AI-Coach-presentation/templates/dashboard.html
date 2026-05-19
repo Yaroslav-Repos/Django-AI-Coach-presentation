@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="padding: 2rem;">
+    <h2>Ваші сесії</h2>
+    <div id="loadingSpinner" style="display: none; text-align: center;">
+        <p>Завантаження...</p>
+    </div>
+    <div id="errorMessage" style="display: none; background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;"></div>
+    <ul id="sessionsList" style="list-style: none; padding: 0;"></ul>
+    <div id="noSessions" style="display: none; text-align: center; color: #6b7280; padding: 2rem;">
+        <p>У вас поки що немає сесій. Почніть нову сесію в розділі AI Coach!</p>
+    </div>
+</div>
+
+<script>
+    async function loadSessions() {
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const errorMessage = document.getElementById('errorMessage');
+        const sessionsList = document.getElementById('sessionsList');
+        const noSessions = document.getElementById('noSessions');
+
+        try {
+            loadingSpinner.style.display = 'block';
+            errorMessage.style.display = 'none';
+            sessionsList.innerHTML = '';
+            noSessions.style.display = 'none';
+
+            const res = await AuthManager.fetchWithAuth('/api/sessions/');
+
+            if (!res) {
+                throw new Error('Network error');
+            }
+
+            if (res.ok) {
+                const sessions = await res.json();
+
+                if (sessions.length === 0) {
+                    noSessions.style.display = 'block';
+                } else {
+                    sessions.forEach(s => {
+                        const li = document.createElement('li');
+                        li.style.cssText = 'background: var(--card); padding: 1.5rem; margin-bottom: 1rem; border-radius: 0.375rem; border-left: 4px solid #3b82f6; cursor: pointer; transition: all 0.3s ease;';
+                        li.onmouseover = () => li.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                        li.onmouseout = () => li.style.boxShadow = 'none';
+
+                        const startDate = new Date(s.start_time).toLocaleString('uk-UA');
+                        const endDate = new Date(s.end_time).toLocaleString('uk-UA');
+                        const score = Math.round(s.score);
+
+                        const start = new Date(s.start_time);
+                        const end = new Date(s.end_time);
+                        const diff = Math.floor((end - start) / 1000);
+                        const minutes = Math.floor(diff / 60);
+                        const seconds = diff % 60;
+                        const duration = `${minutes}м ${seconds}с`;
+
+                        let scoreColor = '#ef4444';
+                        if (score >= 70) scoreColor = '#10b981'; 
+                        else if (score >= 50) scoreColor = '#f59e0b'; 
+
+                        li.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="text-align: left; flex: 1;">
+                                    <div><strong>Дата:</strong> ${startDate}</div>
+                                    <div style="color: #9ca3af; font-size: 0.9rem;">Тривалість: ${duration}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: ${scoreColor};">${score}%</div>
+                                    <div style="color: #6b7280; font-size: 0.85rem;">Результат</div>
+                                </div>
+                            </div>
+                        `;
+
+                        li.onclick = () => {
+                            window.location.href = `/session/${s.uuid}/`;
+                        };
+
+                        sessionsList.appendChild(li);
+                    });
+                }
+            } else {
+                throw new Error(`HTTP ${res.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading sessions:', error);
+            errorMessage.textContent = `Помилка завантаження сесій: ${error.message}`;
+            errorMessage.style.display = 'block';
+        } finally {
+            loadingSpinner.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('Dashboard loaded - starting auth auto-refresh');
+        AuthManager.startAutoRefresh(10);
+
+        loadSessions();
+
+        setInterval(loadSessions, 30000);
+    });
+</script>
+{% endblock %}

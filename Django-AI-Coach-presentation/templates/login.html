@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="auth-container">
+    <h2>Вхід у систему</h2>
+    <div id="errorMessage" style="display: none; background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem;"></div>
+    <form id="loginForm">
+        <input type="text" id="username" placeholder="Логін" required>
+        <input type="password" id="password" placeholder="Пароль" required>
+        <button type="submit" id="submitBtn">Увійти</button>
+    </form>
+    <p>Немає аккаунту? <a href="/register/">Зареєструватися</a></p>
+</div>
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorMessage = document.getElementById('errorMessage');
+        const submitBtn = document.getElementById('submitBtn');
+
+        try {
+            errorMessage.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Завантаження...';
+
+            const res = await fetch('/api/token/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', 
+                body: JSON.stringify({
+                    username: e.target.username.value,
+                    password: e.target.password.value
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+
+                AuthManager.startAutoRefresh(10);
+                console.log('Login successful, redirecting to dashboard...');
+                window.location.href = '/dashboard/';
+                
+            } else {
+
+                errorMessage.textContent = data.detail || 'Невірний логін або пароль';
+                errorMessage.style.display = 'block';
+
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            errorMessage.textContent = 'Помилка підключення. Спробуйте пізніше.';
+            errorMessage.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Увійти';
+        }
+    });
+</script>
+{% endblock %}

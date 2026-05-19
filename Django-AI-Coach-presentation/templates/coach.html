@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="coach-container">
+    <div class="status-bar">
+        <div class="live-info">
+            <span id="sessionStatus" class="status-badge">Ready</span>
+            <div id="liveScore" class="score-display">Score: 100%</div>
+        </div>
+        <div id="timer">00:00</div>
+    </div>
+
+    <div class="main-layout">
+        <div class="video-wrapper">
+            <div id="loadingOverlay" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Ініціалізація AI моделей...</p>
+            </div>
+            <video id="input_video" style="display:none;"></video>
+            <canvas id="output_canvas"></canvas>
+        </div>
+
+        <div class="feedback-sidebar">
+            <h3>Аналіз постави</h3>
+            <div id="problemsList" class="problems-container">
+                <p class="no-problems">Помилок не виявлено. Так тримати!</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="startBtn" class="btn btn-start">Start Session</button>
+        <button id="pauseBtn" class="btn btn-pause" disabled>Pause</button>
+        <button id="stopBtn" class="btn btn-stop" disabled>Finish & Save</button>
+        <button id="exitBtn" class="btn btn-exit">Exit</button>
+    </div>
+</div>
+
+<!-- MediaPipe Dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+<script src="/static/js/cv.js"></script>
+
+<script>
+    let coachInstance = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+
+        const isAuth = await AuthManager.ensureAuthenticated();
+        if (!isAuth) {
+            return;
+        }
+
+        AuthManager.startAutoRefresh(10);
+
+        console.log('User authenticated, initializing AI Coach...');
+
+        const videoElement = document.getElementById('input_video');
+        const canvasElement = document.getElementById('output_canvas');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        if (!videoElement || !canvasElement) {
+            console.error('Video or canvas element not found');
+            if (loadingOverlay) {
+                loadingOverlay.innerHTML = '<p style="color: red;">Помилка: елементи сторінки не знайдені</p>';
+            }
+            return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.error('getUserMedia not supported');
+            if (loadingOverlay) {
+                loadingOverlay.innerHTML = `
+                    <p style="color: red;">Помилка: Ваш браузер не підтримує доступ до камери</p>
+                    <p style="font-size: 0.9rem; color: #f59e0b;">Спробуйте Chrome, Firefox або Edge</p>
+                `;
+            }
+            return;
+        }
+
+
+        try {
+            console.log('Requesting camera permission...');
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: 640, 
+                    height: 480,
+                    facingMode: 'user'
+                },
+                audio: false
+            });
+
+
+            stream.getTracks().forEach(track => track.stop());
+            console.log('Camera permission granted');
+        } catch (error) {
+            console.error('Camera permission error:', error);
+            if (loadingOverlay) {
+                let errorMsg = 'Невідома помилка';
+                if (error.name === 'NotAllowedError') {
+                    errorMsg = 'Ви заборонили доступ до камери. Дозвольте його в налаштуваннях браузера.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMsg = 'Камера не знайдена на цьому комп\'ютері.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMsg = 'Камера вже використовується іншою програмою.';
+                }
+                loadingOverlay.innerHTML = `
+                    <div style="text-align: center; color: #ef4444;">
+                        <p style="font-size: 1.2rem; font-weight: bold; margin-bottom: 1rem;">Помилка доступу до камери</p>
+                        <p>${errorMsg}</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+
+        try {
+            if (typeof AICoach !== 'undefined') {
+                coachInstance = new AICoach(videoElement, canvasElement);
+                console.log('AICoach initialized successfully');
+            } else {
+                console.error("AICoach class not loaded. Check cv.js path.");
+                if (loadingOverlay) {
+                    loadingOverlay.innerHTML = '<p style="color: red;">Помилка: Не вдалося завантажити AI модель</p>';
+                }
+            }
+        } catch (error) {
+            console.error('AICoach initialization error:', error);
+            if (loadingOverlay) {
+                loadingOverlay.innerHTML = `<p style="color: red;">Помилка ініціалізації: ${error.message}</p>`;
+            }
+        }
+    });
+
+
+    document.getElementById('exitBtn').addEventListener('click', () => {
+        if (coachInstance && typeof coachInstance.cleanup === 'function') {
+            coachInstance.cleanup();
+        }
+        window.location.href = '/dashboard/';
+    });
+</script>
+
+{% endblock %}
