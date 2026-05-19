@@ -542,3 +542,7 @@ server {
 - Increase Gunicorn workers
 - Enable database connection pooling
 - Use CDN for static files
+
+# Some Examples of Using the App
+<img width="1889" height="945" alt="image" src="https://github.com/user-attachments/assets/60d41f50-3dee-4e7c-ba13-3a7aea8ff0e9" />
+<img width="1889" height="935" alt="image" src="https://github.com/user-attachments/assets/f7193eb8-b034-41a9-b6b2-c6d34acf28f6" />
