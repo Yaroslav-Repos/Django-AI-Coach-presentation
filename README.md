@@ -174,7 +174,7 @@ python manage.py runserver
 2. View detailed metrics:
    - Overall score (0-100%)
    - Session duration
-   In future:
+3. In future:
    - Hand crossing count
    - Eye contact percentage
    - Movement smoothness
